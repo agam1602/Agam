@@ -1,0 +1,47 @@
+
+#prediction of final data
+
+#read the file 
+read.csv("C:/Users/HP/Desktop/Final Project/bank-additional.csv")
+
+#assign it to a variable to it
+Bank_Test<-read.csv("C:/Users/HP/Desktop/Final Project/bank-additional.csv",na.strings = c(""," ","NA"))
+
+#view the data
+View(Bank_Test)
+
+#Checking the missing values
+colSums(is.na(Bank_Test))
+
+#checknig for dimension
+dim(Bank_Test)
+
+
+#removing unique identifiers
+Bank$pdays=NULL
+
+#Crearing levels
+levels(Bank_Test$job)<-1:11
+levels(Bank_Test$marital)<-1:3
+levels(Bank_Test$education)<-1:7
+levels(Bank_Test$default)<-1:2
+levels(Bank_Test$housing)<-1:2
+levels(Bank_Test$loan)<-1:2
+levels(Bank_Test$contact)<-1:2
+levels(Bank_Test$month)<-1:10
+levels(Bank_Test$day_of_week)<-1:5
+levels(Bank_Test$poutcome)<-1:3
+
+
+#scaling the variable
+Bank_Test$duration<-scale(Bank_Test$duration)
+Bank_Test$nr.employed<-scale(Bank_Test$nr.employed)
+Bank_Test$cons.price.idx<-scale(Bank_Test$cons.price.idx)
+Bank_Test$age<-scale(Bank_Test$age)
+
+#prediction
+result<-knn(train = Bank_train[,-20],test = Bank_Test,cl=Bank_train$y,k=300,prob=TRUE)
+Bank_Test<-data.frame(Bank_Test,result)
+View(Bank_Test)
+summary(Bank_Test)
+
