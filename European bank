@@ -1,0 +1,210 @@
+
+#Read the data
+read.csv("C:/Users/HP/Desktop/Final Project/bank (1).csv")
+
+#Assigining the value
+Bank<-read.csv("C:/Users/HP/Desktop/Final Project/bank (1).csv",na.strings = c(""," ","NA"))
+
+#View the data
+View(Bank)
+
+#Checking the missing values
+colSums(is.na(Bank))
+
+#checknig for dimension
+dim(Bank)
+
+#replacing with mode and median depending upon the type of variable
+Bank$job[is.na(Bank$job)]<-mode(Bank$job)
+Bank$marital[is.na(Bank$marital)]<-mode(Bank$marital)
+Bank$education[is.na(Bank$education)]<-mode(Bank$education)
+Bank$default[is.na(Bank$default)]<-mode(Bank$default)
+Bank$housing[is.na(Bank$housing)]<-mode(Bank$housing)
+Bank$loan[is.na(Bank$loan)]<-mode(Bank$loan)
+
+#removing unique identifiers
+Bank$pdays=NULL
+
+#Crearing levels
+levels(Bank$job)<-1:11
+levels(Bank$marital)<-1:3
+levels(Bank$education)<-1:7
+levels(Bank$default)<-1:2
+levels(Bank$housing)<-1:2
+levels(Bank$loan)<-1:2
+levels(Bank$contact)<-1:2
+levels(Bank$month)<-1:10
+levels(Bank$day_of_week)<-1:5
+levels(Bank$poutcome)<-1:3
+levels(Bank$y)<-0:1
+
+
+#scaling the variable
+Bank$duration<-scale(Bank$duration)
+Bank$nr.employed<-scale(Bank$nr.employed)
+Bank$cons.price.idx<-scale(Bank$cons.price.idx)
+Bank$age<-scale(Bank$age)
+
+boxplot(Bank)
+plot(Bank)
+
+#Split the data
+library(caTools)
+split=sample.split(Bank$y,0.70)
+Bank_train=subset(Bank,split==T)
+Bank_val<-subset(Bank,split==F)
+
+
+#model building
+Model1<-glm(y~.,family = binomial(link = 'logit'),data = Bank_train)
+summary(Model1)
+
+Model2<-glm(y~job+education+contact+month+duration+campaign+poutcome+emp.var.rate+cons.price.idx+euribor3m,family = binomial(link = 'logit'),data =Bank_train)
+summary(Model2)
+
+Model3<-glm(y~job+education+contact+month+duration+campaign+poutcome++emp.var.rate+cons.price.idx+euribor3m,family = binomial(link = 'logit'),data = Bank_train)
+summary(Model3)
+
+#choosing the model with lowest AIC which is Model3 having AIC of 12063
+
+#Creation of prediction
+Pred01<-predict(Model3,newdata=Bank_val,type = 'response')
+
+#convert it into y nd n
+Pred01<-ifelse(Pred01>=0.5,1,0)
+
+#confusion matrix
+cm<-table(Pred01,Bank_val$y)
+
+#creating accuracy function
+Acc=function(cm){
+  tp=cm[2,2]
+  fp=cm[2,1]
+  Acc=tp/(tp+fp)
+  Acc
+}
+Acc(cm)
+
+
+#DECISION TREE
+#using library 
+library(rpart)
+#creating decision tree
+Classifier<-rpart(formula=y~.,data=Bank_val)
+
+Pred02=predict(Classifier,newdata = Bank_val,type = 'class')
+plot(Classifier,uniform=TRUE,cex=0.8)
+text(Classifier,use.n=TRUE,all=TRUE)
+cm=table(Pred02,Bank_val$y)
+Acc(cm)
+
+
+
+#naivebaise 
+library(e1071)
+classifier01<-naiveBayes(y~.,data = Bank_val)
+
+#predict the model
+Pred03<-predict(classifier01,newdata = Bank_val)
+cm<-table(Pred03,Bank_val$y)
+cm
+#accuracy of model
+Acc(cm)
+
+
+#SVM
+library(e1071) 
+
+Classifier01<-svm(formula=y~.,data=Bank_val,type='C-classification',kernel='linear')
+
+Classifier02<-svm(formula=y~.,data=Bank_val,type='C-classification',kernel='radial')
+
+Classifier03<-svm(formula=y~.,data=Bank_val,type='C-classification',kernel='sigmoid')
+
+Classifier04<-svm(formula=y~.,data=Bank_val,type='C-classification',kernel='polynomial')
+
+
+#Calculating accuracy using SVM
+pred1 = predict(Classifier01, newdata = Bank_val)
+pred2 = predict(Classifier02, newdata = Bank_val)
+pred3 = predict(Classifier03, newdata = Bank_val)
+pred4 = predict(Classifier04, newdata = Bank_val)
+
+
+# Making the Confusion Matrix
+#Confusion Matrix
+CF1<-table(pred1,Bank_val$y)
+CF2<-table(pred2,Bank_val$y)
+CF3<-table(pred3,Bank_val$y)
+CF4<-table(pred4,Bank_val$y)
+
+#Checking the Accuracy
+Accuracy1<-Acc(CF1)
+Accuracy1
+
+Accuracy2<-Acc(CF2)
+Accuracy2
+
+Accuracy3<-Acc(CF3)
+Accuracy3
+
+Accuracy4<-Acc(CF4)
+Accuracy4
+
+
+#knn model
+library(class)
+pred6<-knn(train = Bank_train,test = Bank_val,cl=Bank_train$y,k=500,prob=TRUE)
+#confusion matrix
+cm<-table(pred6,Bank_val$y)
+cm
+#accuracy of model
+Acc(cm)
+
+
+#lib for neural network
+
+library(neuralnet)
+
+Bank_train<-as.matrix(Bank_train)
+n<-names(Bank_train)
+Bank_train[,20]<-as.numeric(Bank_train[,20])
+f<-as.formula(paste("y~",paste(n[!n%in%"y"],collapse = "+")))
+
+nn<-neuralnet(f,data=Bank_train,likelihood=FALSE,hidden =3)
+
+plot(nn)
+
+boxplot(Bank)
+
+Bank$job<-as.numeric(Bank$job)
+Bank$marital<-as.numeric(Bank$marital)
+Bank$education<-as.numeric(Bank$education)
+Bank$default<-as.numeric(Bank$default)
+Bank$housing<-as.numeric(Bank$housing)
+Bank$loan<-as.numeric(Bank$loan)
+Bank$contact<-as.numeric(Bank$contact)
+Bank$month<-as.numeric(Bank$month)
+Bank$day_of_week<-as.numeric(Bank$day_of_week)
+Bank$poutcome<-as.numeric(Bank$poutcome)
+
+scale(Bank[1:19])
+
+
+View(Bank)
+
+#Random Forests
+library(randomForest)
+RF<-randomForest(y ~., data = Bank_train,nodesize = 25,ntree=200)
+pred7 = predict(RF,newdata= Bank_val)
+#confusion matrix
+cmrf<-table(pred7,Bank_val$y)
+cmrf
+#accuracy of model
+Acc(cmrf)
+
+
+
+
+
+
